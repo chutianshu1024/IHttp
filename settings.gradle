@@ -1,0 +1,4 @@
+rootProject.name = "IHttp"
+
+include ':ihttp'
+include ':app'

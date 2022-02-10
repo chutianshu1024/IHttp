@@ -1,0 +1,51 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'com.github.dcendents.android-maven'
+
+def retrofit = "2.9.0"
+def kotlin_version = '1.4.20'
+def kotlinx_coroutines = '1.4.1'
+
+android {
+    compileSdkVersion 31
+    buildToolsVersion "30.0.2"
+
+    defaultConfig {
+        minSdkVersion 21
+        targetSdkVersion 30
+        versionCode 2
+        versionName "1.01"
+    }
+
+    lintOptions {
+        abortOnError false
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+
+//    //基础库
+//    api project(':sdk_core')
+
+    //网络库
+    api "com.squareup.retrofit2:retrofit:${retrofit}"
+    api "com.squareup.retrofit2:converter-gson:${retrofit}"
+
+    //磁盘缓存
+    implementation 'com.jakewharton:disklrucache:2.0.2'
+
+    //kotlin，java混合开发支持库
+    api "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${kotlin_version}"
+
+    //kotlin协程
+    api "org.jetbrains.kotlinx:kotlinx-coroutines-core:${kotlinx_coroutines}"
+    api "org.jetbrains.kotlinx:kotlinx-coroutines-android:${kotlinx_coroutines}"
+
+    //临时方案，待优化
+//    //Recyclerview适配器
+//    api project(':library:wrapper:wrapper_BaseQuickAdapter')
+    // json
+//    api 'com.alibaba:fastjson:1.1.72.android'
+
+}

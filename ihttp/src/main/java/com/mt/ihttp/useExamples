@@ -1,0 +1,67 @@
+java调用示例：
+
+new BaseRequestExt().executeWithJava(URLConstants.API_ACCOUNT_USERINFO, Utils.getPublicParams(), new BaseRequestExt.RequestBlock<ToUserRoomInfoResponse.ToUserRoom>() {
+
+    @Override
+    public void errorCallBack(int code, @NotNull String mes, @Nullable String data) {
+
+    }
+
+    @Override
+    public void successCallback(@NotNull ToUserRoomInfoResponse.ToUserRoom toUserRoom) {
+    }
+});
+
+
+非viewModel调用：
+
+GlobalScope.launch(Dispatchers.IO) {
+    IHttp.instance.createRequest()
+            //参数
+            .params("page", "1")
+            //缓存
+            .cacheKey("htt;//sdfsf:+page+uid")
+            .cacheMode(CacheMode.CACHEANDREMOTEDISTINCT)
+            //传type 例如：object : TypeToken<List<BannerBean>>() {}.type
+            .executeCache(successBlock = { success: ApiResult.Success<Any> ->
+                run {
+                    success.data
+                }
+            })
+            //执行请求
+            .executeWithBuvId(
+                    call = { apiService, params ->
+                        apiService.testPost(URLConstants.getAPIUrl(URLConstants.API_FOLLOWED_LIST), params)
+                    },
+                    successBlock = { result ->
+                        val s = result.data
+                    },
+                    errorBlock = { error ->
+                        val s = error.code
+                    })
+}
+
+
+viewModel调用：
+
+viewModelScope.launch(Dispatchers.IO) {
+        IHttp.instance.createRequest()
+                //参数
+                .params(URLParamsConstants.PARAM_TOUID, toUid)
+                .params("type", when (chatType) {//3 语音聊天 ， 4 视频聊天
+                    AgoraAVChatType.AUDIO -> "3"
+                    AgoraAVChatType.VIDEO -> "4"
+                    else -> "3"
+                })
+                //执行请求
+                .executeWithBuvId(
+                        call = { apiService, params ->
+                            apiService.launchGuessDraw(URLConstants.getAPIUrl(URLConstants.API_GAME_GUESSDRAW_LAUNCH), params)
+                        },
+                        successBlock = { result ->
+                            onLaunchGuessDrawSuccess.value = result.data?.apply { touid = toUid }
+                        },
+                        errorBlock = { error ->
+                            onLaunchGuessDrawFailed.value = ErrorMsg(error.code, error.mes)
+                        })
+    }
