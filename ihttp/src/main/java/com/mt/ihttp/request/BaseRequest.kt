@@ -2,10 +2,9 @@ package com.mt.ihttp.request
 
 import android.content.Context
 import android.text.TextUtils
-import android.util.Log
 import com.mt.ihttp.IHttp
 import com.mt.ihttp.IHttp.Companion.instance
-import com.mt.ihttp.api.ApiService
+import com.mt.ihttp.api.IHttpApiService
 import com.mt.ihttp.base.BaseResponse
 import com.mt.ihttp.body.ProgressResponseCallBack
 import com.mt.ihttp.body.UploadProgressRequestBody
@@ -82,7 +81,7 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
      */
     private lateinit var retrofit: Retrofit
     private var converterFactories: MutableList<Converter.Factory> = ArrayList()
-    private lateinit var apiManager: ApiService                                   //通用的的api接口
+    private lateinit var apiManager: IHttpApiService                                   //通用的的api接口
 
     /**
      * 缓存相关
@@ -260,12 +259,12 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
         retrofit = generateRetrofit().client(okHttpClient).build()
         //iCache = instance.iCache
         //Log.d("测试启动速度", "request 开始build--apiManager")
-        apiManager = retrofit.create(ApiService::class.java)
+        apiManager = retrofit.create(IHttpApiService::class.java)
         //Log.d("测试启动速度", "request 开始build--结束")
         return this as R
     }
 
-    private fun getApiService(): ApiService {
+    private fun getApiService(): IHttpApiService {
         return build().apiManager
     }
 
@@ -564,17 +563,17 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
         return this as R
     }
 
-    //之后在这里捕捉通用异常
-    private suspend fun <T> safeApiCall(call: suspend (apiService: ApiService, params: MutableMap<String, String>) -> BaseResponse<T>): BaseResponse<T> {
-        return try {
-            call(getApiService(), getParams())
-        } catch (e: Exception) {
-            // An exception was thrown when calling the API so we're converting this to an IOException
-            HttpLog.e(e.message)
-            val ex = ApiException.handleException(e)
-            BaseResponse(ex.code, ex.message ?: "", null)
-        }
-    }
+//    //之后在这里捕捉通用异常
+//    private suspend fun <T> safeApiCall(call: suspend (apiService: IHttpApiService, params: MutableMap<String, String>) -> BaseResponse<T>): BaseResponse<T> {
+//        return try {
+//            call(getApiService(), getParams())
+//        } catch (e: Exception) {
+//            // An exception was thrown when calling the API so we're converting this to an IOException
+//            HttpLog.e(e.message)
+//            val ex = ApiException.handleException(e)
+//            BaseResponse(ex.code, ex.message ?: "", null)
+//        }
+//    }
 
     //之后在这里捕捉通用异常
     private suspend fun <T> safeApiCallTest(call: suspend (retrofit: Retrofit, params: MutableMap<String, String>) -> BaseResponse<T>): BaseResponse<T> {

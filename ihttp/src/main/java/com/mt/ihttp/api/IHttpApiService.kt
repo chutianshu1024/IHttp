@@ -47,7 +47,7 @@ import retrofit2.http.*
  *             4.小游戏相关
  *             5.lib_project里的，临时放在这
  */
-interface ApiService {
+interface IHttpApiService {
     /**
      * ━━━━━━━━━━━━━━━━━━━
      * 通用api  （临时提示：一般包含通用上传，提交等全域通用接口）
