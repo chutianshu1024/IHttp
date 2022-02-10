@@ -269,50 +269,50 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
         return build().apiManager
     }
 
-    //通用的请求，一般post、get啥的都用这个，待删除
-    suspend fun <T : Any> execute(
-            call: suspend (apiService: ApiService, params: MutableMap<String, String>) -> BaseResponse<T>,
-            successBlock: (CoroutineScope.(ApiResult: ApiResult.Success<T>) -> Unit)? = null,
-            errorBlock: (CoroutineScope.(error: ApiResult.Error) -> Unit)? = null) {
-        coroutineScope {
-            try {
-                //Log.d("测试启动速度", "执行请求--开始")
-                async(Dispatchers.IO) {
-                    val response = safeApiCall(call)
-                    //Log.d("测试启动速度", "执行请求--结束")
-                    if (response.isSuccess()) {
-                        tagIsRemoteFinished = true
-
-                        launch(Dispatchers.Main) {
-                            successBlock?.let {
-                                it(ApiResult.Success(response.data))
-                                //Log.d("测试启动速度", "执行请求--结束--回调")
-                            }
-                        }
-                        cacheKey?.let {
-                            iCache.save(it, response.data)
-                        }
-
-                    } else {
-                        tagIsRemoteFinished = true
-                        launch(Dispatchers.Main) {
-                            errorBlock?.let {
-                                it(ApiResult.Error(response.result, response.msg
-                                        ?: "", response.data.toString()))
-                            }
-                        }
-
-                    }
-                }
-
-            } catch (e: Exception) {
-                HttpLog.e(e.message)
-                val ex = ApiException.handleException(e)
-                errorBlock?.let { it(ApiResult.Error(ex.code, ex.message ?: "", "")) }
-                //errorBlock?.let { it(ApiResult.Error(-9999, errorMes, "")) }
-            }
-        }
-    }
+//    //通用的请求，一般post、get啥的都用这个，待删除
+//    suspend fun <T : Any> execute(
+//            call: suspend (apiService: ApiService, params: MutableMap<String, String>) -> BaseResponse<T>,
+//            successBlock: (CoroutineScope.(ApiResult: ApiResult.Success<T>) -> Unit)? = null,
+//            errorBlock: (CoroutineScope.(error: ApiResult.Error) -> Unit)? = null) {
+//        coroutineScope {
+//            try {
+//                //Log.d("测试启动速度", "执行请求--开始")
+//                async(Dispatchers.IO) {
+//                    val response = safeApiCall(call)
+//                    //Log.d("测试启动速度", "执行请求--结束")
+//                    if (response.isSuccess()) {
+//                        tagIsRemoteFinished = true
+//
+//                        launch(Dispatchers.Main) {
+//                            successBlock?.let {
+//                                it(ApiResult.Success(response.data))
+//                                //Log.d("测试启动速度", "执行请求--结束--回调")
+//                            }
+//                        }
+//                        cacheKey?.let {
+//                            iCache.save(it, response.data)
+//                        }
+//
+//                    } else {
+//                        tagIsRemoteFinished = true
+//                        launch(Dispatchers.Main) {
+//                            errorBlock?.let {
+//                                it(ApiResult.Error(response.result, response.msg
+//                                        ?: "", response.data.toString()))
+//                            }
+//                        }
+//
+//                    }
+//                }
+//
+//            } catch (e: Exception) {
+//                HttpLog.e(e.message)
+//                val ex = ApiException.handleException(e)
+//                errorBlock?.let { it(ApiResult.Error(ex.code, ex.message ?: "", "")) }
+//                //errorBlock?.let { it(ApiResult.Error(-9999, errorMes, "")) }
+//            }
+//        }
+//    }
 
     //修改中。。。
     suspend fun <T : Any> executeTest(
@@ -359,53 +359,53 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
         }
     }
 
-    //带有返回值的通用的请求，比上面那个多个返回值，待删除
-    suspend fun <T : Any> executeWithResult(
-            call: suspend (apiService: ApiService, params: MutableMap<String, String>) -> BaseResponse<T>,
-            successBlock: (suspend CoroutineScope.(ApiResult: ApiResult.Success<T>) -> Unit)? = null,
-            errorBlock: (suspend CoroutineScope.(error: ApiResult.Error) -> Unit)? = null): ApiResult<T> {
-        return coroutineScope {
-            try {
-                withContext(Dispatchers.IO) {
-                    val response = safeApiCall(call)
-                    if (response.isSuccess()) {
-                        tagIsRemoteFinished = true
-
-                        launch(Dispatchers.Main) {
-                            successBlock?.let {
-                                it(ApiResult.Success(response.data))
-                            }
-                        }
-
-                        cacheKey?.let {
-                            iCache.save(it, response.data)
-                        }
-
-                        ApiResult.Success(response.data)
-
-                    } else {
-                        tagIsRemoteFinished = true
-
-                        launch(Dispatchers.Main) {
-                            errorBlock?.let {
-                                it(ApiResult.Error(response.result, response.msg
-                                        ?: "", response.data.toString()))
-                            }
-                        }
-
-                        ApiResult.Error(response.result, response.msg
-                                ?: "", response.data.toString())
-                    }
-                }
-
-            } catch (e: Exception) {
-                HttpLog.e(e.message)
-                val ex = ApiException.handleException(e)
-                errorBlock?.let { it(ApiResult.Error(ex.code, ex.message ?: "", "")) }
-                ApiResult.Error(ex.code, ex.message ?: "", "")
-            }
-        }
-    }
+//    //带有返回值的通用的请求，比上面那个多个返回值，待删除
+//    suspend fun <T : Any> executeWithResult(
+//            call: suspend (apiService: ApiService, params: MutableMap<String, String>) -> BaseResponse<T>,
+//            successBlock: (suspend CoroutineScope.(ApiResult: ApiResult.Success<T>) -> Unit)? = null,
+//            errorBlock: (suspend CoroutineScope.(error: ApiResult.Error) -> Unit)? = null): ApiResult<T> {
+//        return coroutineScope {
+//            try {
+//                withContext(Dispatchers.IO) {
+//                    val response = safeApiCall(call)
+//                    if (response.isSuccess()) {
+//                        tagIsRemoteFinished = true
+//
+//                        launch(Dispatchers.Main) {
+//                            successBlock?.let {
+//                                it(ApiResult.Success(response.data))
+//                            }
+//                        }
+//
+//                        cacheKey?.let {
+//                            iCache.save(it, response.data)
+//                        }
+//
+//                        ApiResult.Success(response.data)
+//
+//                    } else {
+//                        tagIsRemoteFinished = true
+//
+//                        launch(Dispatchers.Main) {
+//                            errorBlock?.let {
+//                                it(ApiResult.Error(response.result, response.msg
+//                                        ?: "", response.data.toString()))
+//                            }
+//                        }
+//
+//                        ApiResult.Error(response.result, response.msg
+//                                ?: "", response.data.toString())
+//                    }
+//                }
+//
+//            } catch (e: Exception) {
+//                HttpLog.e(e.message)
+//                val ex = ApiException.handleException(e)
+//                errorBlock?.let { it(ApiResult.Error(ex.code, ex.message ?: "", "")) }
+//                ApiResult.Error(ex.code, ex.message ?: "", "")
+//            }
+//        }
+//    }
 
     //带有返回值的通用的请求，比上面那个多个返回值，修改中。。。
     suspend fun <T : Any> executeWithResultTest(
