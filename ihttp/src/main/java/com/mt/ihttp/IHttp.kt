@@ -12,7 +12,7 @@ import com.mt.ihttp.cookie.CookieManger
 import com.mt.ihttp.https.HttpsUtils
 import com.mt.ihttp.interceptor.HttpLoggingInterceptor
 import com.mt.ihttp.model.HttpHeaders
-import com.mt.ihttp.request.*
+import com.mt.ihttp.request.CommonRequest
 import com.mt.ihttp.utils.HttpLog
 import com.mt.ihttp.utils.Utils
 import okhttp3.*
@@ -106,7 +106,7 @@ class IHttp {
         okHttpClientBuilder.connectTimeout(DEFAULT_MILLISECONDS.toLong(), TimeUnit.MILLISECONDS)
         retrofitBuilder = Retrofit.Builder()
         iCacheBuilder = ICache.Builder().init(sContext)
-                .diskConverter(GsonDiskConverter()) //目前只支持Serializable和Gson缓存其它可以扩展
+            .diskConverter(GsonDiskConverter()) //目前只支持Serializable和Gson缓存其它可以扩展
         iCache = iCacheBuilder.build()
     }
 
@@ -200,10 +200,31 @@ class IHttp {
     }
 
     /**
+     * 添加了自定义log拦截器（因为有些时候需要用到数据加密，log要添加解密逻辑，又没必要单独兼容这个业务，干脆直接自定义拦截器吧）
+     * @param logInterceptor 自定义log拦截器
+     */
+    fun debug(tag: String?, isPrintException: Boolean, logInterceptor: Interceptor): IHttp? {
+        val tempTag = if (TextUtils.isEmpty(tag)) "IHttp_" else tag!!
+        if (isPrintException) {
+            okHttpClientBuilder!!.addInterceptor(logInterceptor)
+        }
+        HttpLog.customTagPrefix = tempTag
+        HttpLog.allowE = isPrintException
+        HttpLog.allowD = isPrintException
+        HttpLog.allowI = isPrintException
+        HttpLog.allowV = isPrintException
+        return this
+    }
+
+    /**
      * https的全局自签名证书
      */
     fun setCertificates(vararg certificates: InputStream?): IHttp {
-        val sslParams: HttpsUtils.SSLParams = HttpsUtils.getSslSocketFactory(null, null, certificates)
+        val sslParams: HttpsUtils.SSLParams = HttpsUtils.getSslSocketFactory(
+            null,
+            null,
+            certificates
+        )
         okHttpClientBuilder!!.sslSocketFactory(sslParams.sSLSocketFactory, sslParams.trustManager)
         return this
     }
@@ -211,8 +232,16 @@ class IHttp {
     /**
      * https双向认证证书
      */
-    fun setCertificates(bksFile: InputStream?, password: String?, vararg certificates: InputStream?): IHttp {
-        val sslParams: HttpsUtils.SSLParams = HttpsUtils.getSslSocketFactory(bksFile, password, certificates)
+    fun setCertificates(
+        bksFile: InputStream?,
+        password: String?,
+        vararg certificates: InputStream?
+    ): IHttp {
+        val sslParams: HttpsUtils.SSLParams = HttpsUtils.getSslSocketFactory(
+            bksFile,
+            password,
+            certificates
+        )
         okHttpClientBuilder!!.sslSocketFactory(sslParams.sSLSocketFactory, sslParams.trustManager)
         return this
     }
@@ -405,7 +434,12 @@ class IHttp {
      * 添加全局网络拦截器
      */
     fun addNetworkInterceptor(interceptor: Interceptor?): IHttp {
-        okHttpClientBuilder!!.addNetworkInterceptor(Utils.checkNotNull(interceptor, "interceptor == null"))
+        okHttpClientBuilder!!.addNetworkInterceptor(
+            Utils.checkNotNull(
+                interceptor,
+                "interceptor == null"
+            )
+        )
         return this
     }
 
@@ -421,7 +455,12 @@ class IHttp {
      * 全局设置请求的连接池
      */
     fun setOkconnectionPool(connectionPool: ConnectionPool?): IHttp {
-        okHttpClientBuilder!!.connectionPool(Utils.checkNotNull(connectionPool, "connectionPool == null"))
+        okHttpClientBuilder!!.connectionPool(
+            Utils.checkNotNull(
+                connectionPool,
+                "connectionPool == null"
+            )
+        )
         return this
     }
 
