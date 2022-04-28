@@ -3,6 +3,7 @@ package com.mt.ihttp.utils.download
 import android.content.Context
 import android.net.Uri
 import android.os.Environment
+import android.util.Log
 import android.webkit.MimeTypeMap
 import com.mt.ihttp.IHttp
 import kotlinx.coroutines.*
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import java.io.*
 import java.math.BigInteger
+import java.security.DigestInputStream
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.util.concurrent.Executors
@@ -168,7 +170,8 @@ open class IDownloader(
                          */
                         if (!it.bean.md5.isNullOrBlank()) {
 //                            val md5Temp = FileUtils.getFileMD5ToString(it.uri.path)
-                            val md5Temp = getMD5Three(it.uri.path) ?: ""
+//                            val md5Temp = getMD5Three(it.uri.path) ?: ""
+                            val md5Temp = String(getFileMD5(File(it.uri.path)) ?: byteArrayOf())
                             if (md5Temp.equals(it.bean.md5, true)) {
                                 onDownloadListener.onSuccess(
                                     it.uri, md5Temp, it.bean.extraMap
@@ -349,27 +352,60 @@ open class IDownloader(
         return this
     }
 
-    //私有方法，获取md5
-    private fun getMD5Three(path: String?): String? {
-        var bi: BigInteger? = null
+//    //私有方法，获取md5
+//    private fun getMD5Three(path: String?): String? {
+//        var bi: BigInteger? = null
+//        try {
+//            val buffer = ByteArray(8192)
+//            var len = 0
+//            val md: MessageDigest = MessageDigest.getInstance("MD5")
+//            val f = File(path)
+//            val fis = FileInputStream(f)
+//            while (fis.read(buffer).also { len = it } != -1) {
+//                md.update(buffer, 0, len)
+//            }
+//            fis.close()
+//            val b: ByteArray = md.digest()
+//            bi = BigInteger(1, b)
+//        } catch (e: NoSuchAlgorithmException) {
+//            e.printStackTrace()
+//        } catch (e: IOException) {
+//            e.printStackTrace()
+//        }
+//        return bi?.toString(16)
+//    }
+
+    /**
+     * Return the MD5 of file.
+     *
+     * @param file The file.
+     * @return the md5 of file
+     */
+    open fun getFileMD5(file: File): ByteArray? {
+        if (file == null) return null
+        var dis: DigestInputStream? = null
         try {
-            val buffer = ByteArray(8192)
-            var len = 0
-            val md: MessageDigest = MessageDigest.getInstance("MD5")
-            val f = File(path)
-            val fis = FileInputStream(f)
-            while (fis.read(buffer).also { len = it } != -1) {
-                md.update(buffer, 0, len)
+            val fis = FileInputStream(file)
+            var md = MessageDigest.getInstance("MD5")
+            dis = DigestInputStream(fis, md)
+            val buffer = ByteArray(1024 * 256)
+            while (true) {
+                if (dis.read(buffer) <= 0) break
             }
-            fis.close()
-            val b: ByteArray = md.digest()
-            bi = BigInteger(1, b)
+            md = dis.messageDigest
+            return md.digest()
         } catch (e: NoSuchAlgorithmException) {
             e.printStackTrace()
         } catch (e: IOException) {
             e.printStackTrace()
+        } finally {
+            try {
+                dis?.close()
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
         }
-        return bi?.toString(16)
+        return null
     }
 }
 
