@@ -169,9 +169,7 @@ open class IDownloader(
                          * 如果有md5则需要校验下，如果不匹配，会重新下载一次
                          */
                         if (!it.bean.md5.isNullOrBlank()) {
-//                            val md5Temp = FileUtils.getFileMD5ToString(it.uri.path)
-//                            val md5Temp = getMD5Three(it.uri.path) ?: ""
-                            val md5Temp = String(getFileMD5(File(it.uri.path)) ?: byteArrayOf())
+                            var md5Temp = getFileMD5(it.uri.path) ?: ""
                             if (md5Temp.equals(it.bean.md5, true)) {
                                 onDownloadListener.onSuccess(
                                     it.uri, md5Temp, it.bean.extraMap
@@ -352,60 +350,54 @@ open class IDownloader(
         return this
     }
 
-//    //私有方法，获取md5
-//    private fun getMD5Three(path: String?): String? {
-//        var bi: BigInteger? = null
-//        try {
-//            val buffer = ByteArray(8192)
-//            var len = 0
-//            val md: MessageDigest = MessageDigest.getInstance("MD5")
-//            val f = File(path)
-//            val fis = FileInputStream(f)
-//            while (fis.read(buffer).also { len = it } != -1) {
-//                md.update(buffer, 0, len)
-//            }
-//            fis.close()
-//            val b: ByteArray = md.digest()
-//            bi = BigInteger(1, b)
-//        } catch (e: NoSuchAlgorithmException) {
-//            e.printStackTrace()
-//        } catch (e: IOException) {
-//            e.printStackTrace()
-//        }
-//        return bi?.toString(16)
-//    }
-
     /**
-     * Return the MD5 of file.
-     *
-     * @param file The file.
-     * @return the md5 of file
+     * 私有方法，获取文件MD5
      */
-    open fun getFileMD5(file: File): ByteArray? {
-        if (file == null) return null
-        var dis: DigestInputStream? = null
-        try {
-            val fis = FileInputStream(file)
-            var md = MessageDigest.getInstance("MD5")
-            dis = DigestInputStream(fis, md)
-            val buffer = ByteArray(1024 * 256)
-            while (true) {
-                if (dis.read(buffer) <= 0) break
-            }
-            md = dis.messageDigest
-            return md.digest()
-        } catch (e: NoSuchAlgorithmException) {
-            e.printStackTrace()
-        } catch (e: IOException) {
-            e.printStackTrace()
-        } finally {
-            try {
-                dis?.close()
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
+    private fun getFileMD5(path: String?): String? {
+        if (path.isNullOrEmpty()) {
+            return null
         }
-        return null
+        var digest: MessageDigest? = null
+        var fileIS: FileInputStream? = null
+        val buffer = ByteArray(1024)
+        var len = 0
+        try {
+            digest = MessageDigest.getInstance("MD5")
+            val oldF = File(path)
+            fileIS = FileInputStream(oldF)
+            while (fileIS.read(buffer).also { len = it } != -1) {
+                digest.update(buffer, 0, len)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        } finally {
+            fileIS?.close()
+        }
+        return bytesToHexString(digest?.digest())
+    }
+
+    //接上，byte转string
+    private fun bytesToHexString(src: ByteArray?): String? {
+        val result = StringBuilder("")
+        if (src?.isEmpty() == true) {
+            return null
+        }
+
+        src?.forEach {
+            var i = it.toInt()
+            //这里需要对b与0xff做位与运算，
+            //若b为负数，强制转换将高位位扩展，导致错误，
+            //故需要高位清零
+            val hexStr = Integer.toHexString(i and 0xff)
+            //若转换后的十六进制数字只有一位，
+            //则在前补"0"
+            if (hexStr.length == 1) {
+                result.append(0)
+            }
+            result.append(hexStr)
+        }
+        return result.toString()
     }
 }
 
