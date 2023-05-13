@@ -2,6 +2,7 @@ package com.mt.ihttp.request
 
 import android.content.Context
 import android.text.TextUtils
+import com.google.gson.Gson
 import com.mt.ihttp.IHttp
 import com.mt.ihttp.IHttp.Companion.instance
 import com.mt.ihttp.api.IHttpApiService
@@ -107,10 +108,17 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
     private var sign = true                                                       //是否需要签名
     private var timeStamp = true                                                  //是否需要追加时间戳
     private var accessToken = true                                                //是否需要追加token
-    private var isAddParams = true                                                //是否添加公参和其他参数（下载时不需要参数）
+    private var isAddParams =
+        true                                                //是否添加公参和其他参数（下载时不需要参数）
 
     //标识网络请求数据是否已回传，如果网络请求快于硬盘读取则不再加载硬盘缓存
     private var tagIsRemoteFinished = false
+
+    //参数类型：是否是json格式提交
+    private var isJsonParams = false
+
+    //缓存Gson实例
+    private var gson = Gson()
 
     /**
      * 根据当前的请求参数，生成对应的OkClient
@@ -122,7 +130,8 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
             //Log.d("测试启动速度", "OkHttpClient.Builder初始化完成")
             for (interceptor in builder!!.interceptors()) {
                 if (interceptor is BaseDynamicInterceptor<*>) {
-                    interceptor.sign(sign).timeStamp(timeStamp).accessToken(accessToken).addParams(isAddParams)
+                    interceptor.sign(sign).timeStamp(timeStamp).accessToken(accessToken)
+                        .addParams(isAddParams)
                 }
             }
             //Log.d("测试启动速度", "添加拦截器完成")
@@ -132,9 +141,15 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
             val newClientBuilder = instance.getOkHttpClient()!!.newBuilder()
             if (readTimeOut > 0) newClientBuilder.readTimeout(readTimeOut, TimeUnit.MILLISECONDS)
             if (writeTimeOut > 0) newClientBuilder.writeTimeout(writeTimeOut, TimeUnit.MILLISECONDS)
-            if (connectTimeout > 0) newClientBuilder.connectTimeout(connectTimeout, TimeUnit.MILLISECONDS)
+            if (connectTimeout > 0) newClientBuilder.connectTimeout(
+                connectTimeout,
+                TimeUnit.MILLISECONDS
+            )
             if (hostnameVerifier != null) newClientBuilder.hostnameVerifier(hostnameVerifier)
-            if (sslParams != null) newClientBuilder.sslSocketFactory(sslParams!!.sSLSocketFactory, sslParams!!.trustManager)
+            if (sslParams != null) newClientBuilder.sslSocketFactory(
+                sslParams!!.sSLSocketFactory,
+                sslParams!!.trustManager
+            )
             if (proxy != null) newClientBuilder.proxy(proxy)
             if (cookies.size > 0) instance.getCookieJar()!!.addCookies(cookies)
 
@@ -142,13 +157,15 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
             newClientBuilder.addInterceptor(HeadersInterceptor(headers))
             for (interceptor in interceptors) {
                 if (interceptor is BaseDynamicInterceptor<*>) {
-                    interceptor.sign(sign).timeStamp(timeStamp).accessToken(accessToken).addParams(isAddParams)
+                    interceptor.sign(sign).timeStamp(timeStamp).accessToken(accessToken)
+                        .addParams(isAddParams)
                 }
                 newClientBuilder.addInterceptor(interceptor)
             }
             for (interceptor in newClientBuilder.interceptors()) {
                 if (interceptor is BaseDynamicInterceptor<*>) {
-                    interceptor.sign(sign).timeStamp(timeStamp).accessToken(accessToken).addParams(isAddParams)
+                    interceptor.sign(sign).timeStamp(timeStamp).accessToken(accessToken)
+                        .addParams(isAddParams)
                 }
             }
             if (networkInterceptors.size > 0) {
@@ -221,11 +238,16 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
                             cacheDirectory.mkdirs()
                         }
                     }
-                    cache = Cache(cacheDirectory, (5 * 1024 * 1024.toLong()).coerceAtLeast(instance.getCacheMaxSize()))
+                    cache = Cache(
+                        cacheDirectory,
+                        (5 * 1024 * 1024.toLong()).coerceAtLeast(instance.getCacheMaxSize())
+                    )
                 }
                 val cacheControlValue = String.format("max-age=%d", Math.max(-1, cacheTime))
-                val rewriteCacheControlInterceptor = CacheInterceptor(instance.getContext(), cacheControlValue)
-                val rewriteCacheControlInterceptorOffline = CacheInterceptorOffline(instance.getContext(), cacheControlValue)
+                val rewriteCacheControlInterceptor =
+                    CacheInterceptor(instance.getContext(), cacheControlValue)
+                val rewriteCacheControlInterceptorOffline =
+                    CacheInterceptorOffline(instance.getContext(), cacheControlValue)
                 networkInterceptors.add(rewriteCacheControlInterceptor)
                 networkInterceptors.add(rewriteCacheControlInterceptorOffline)
                 interceptors.add(rewriteCacheControlInterceptorOffline)
@@ -234,13 +256,13 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
                 interceptors.add(NoCacheInterceptor())
                 return if (diskConverter == null) {
                     rxCacheBuilder.cachekey(Utils.checkNotNull(cacheKey, "cacheKey == null"))
-                            .cacheTime(cacheTime)
+                        .cacheTime(cacheTime)
                     rxCacheBuilder
                 } else {
                     val cacheBuilder = instance.getRxCache().newBuilder()
                     cacheBuilder.diskConverter(diskConverter)
-                            .cachekey(Utils.checkNotNull(cacheKey, "cacheKey == null"))
-                            .cacheTime(cacheTime)
+                        .cachekey(Utils.checkNotNull(cacheKey, "cacheKey == null"))
+                        .cacheTime(cacheTime)
                     cacheBuilder
                 }
             }
@@ -315,9 +337,10 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
 
     //修改中。。。
     suspend fun <T : Any> executeTest(
-            call: suspend (retrofit: Retrofit, params: MutableMap<String, String>) -> BaseResponse<T>,
-            successBlock: (CoroutineScope.(ApiResult: ApiResult.Success<T>) -> Unit)? = null,
-            errorBlock: (CoroutineScope.(error: ApiResult.Error) -> Unit)? = null) {
+        call: suspend (retrofit: Retrofit, params: MutableMap<String, String>) -> BaseResponse<T>,
+        successBlock: (CoroutineScope.(ApiResult: ApiResult.Success<T>) -> Unit)? = null,
+        errorBlock: (CoroutineScope.(error: ApiResult.Error) -> Unit)? = null
+    ) {
         coroutineScope {
             try {
                 //Log.d("测试启动速度", "执行请求--开始")
@@ -341,8 +364,12 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
                         tagIsRemoteFinished = true
                         launch(Dispatchers.Main) {
                             errorBlock?.let {
-                                it(ApiResult.Error(response.result, response.msg
-                                        ?: "", response.data.toString()))
+                                it(
+                                    ApiResult.Error(
+                                        response.result, response.msg
+                                            ?: "", response.data.toString()
+                                    )
+                                )
                             }
                         }
 
@@ -357,6 +384,57 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
             }
         }
     }
+
+    //传json参数
+    suspend fun <T : Any> executeTest2(
+        call: suspend (retrofit: Retrofit, body: RequestBody) -> BaseResponse<T>,
+        successBlock: (CoroutineScope.(ApiResult: ApiResult.Success<T>) -> Unit)? = null,
+        errorBlock: (CoroutineScope.(error: ApiResult.Error) -> Unit)? = null
+    ) {
+        coroutineScope {
+            try {
+                //Log.d("测试启动速度", "执行请求--开始")
+                async(Dispatchers.IO) {
+                    val response = safeApiCallTest2(call)
+                    //Log.d("测试启动速度", "执行请求--结束")
+                    if (response.isSuccess()) {
+                        tagIsRemoteFinished = true
+
+                        launch(Dispatchers.Main) {
+                            successBlock?.let {
+                                it(ApiResult.Success(response.data))
+                                //Log.d("测试启动速度", "执行请求--结束--回调")
+                            }
+                        }
+                        cacheKey?.let {
+                            iCache.save(it, response.data)
+                        }
+
+                    } else {
+                        tagIsRemoteFinished = true
+                        launch(Dispatchers.Main) {
+                            errorBlock?.let {
+                                it(
+                                    ApiResult.Error(
+                                        response.result, response.msg
+                                            ?: "", response.data.toString()
+                                    )
+                                )
+                            }
+                        }
+
+                    }
+                }
+
+            } catch (e: Exception) {
+                HttpLog.e(e.message)
+                val ex = ApiException.handleException(e)
+                errorBlock?.let { it(ApiResult.Error(ex.code, ex.message ?: "", "")) }
+                //errorBlock?.let { it(ApiResult.Error(-9999, errorMes, "")) }
+            }
+        }
+    }
+
 
 //    //带有返回值的通用的请求，比上面那个多个返回值，待删除
 //    suspend fun <T : Any> executeWithResult(
@@ -408,9 +486,10 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
 
     //带有返回值的通用的请求，比上面那个多个返回值，修改中。。。
     suspend fun <T : Any> executeWithResultTest(
-            call: suspend (retrofit: Retrofit, params: MutableMap<String, String>) -> BaseResponse<T>,
-            successBlock: (suspend CoroutineScope.(ApiResult: ApiResult.Success<T>) -> Unit)? = null,
-            errorBlock: (suspend CoroutineScope.(error: ApiResult.Error) -> Unit)? = null): ApiResult<T> {
+        call: suspend (retrofit: Retrofit, params: MutableMap<String, String>) -> BaseResponse<T>,
+        successBlock: (suspend CoroutineScope.(ApiResult: ApiResult.Success<T>) -> Unit)? = null,
+        errorBlock: (suspend CoroutineScope.(error: ApiResult.Error) -> Unit)? = null
+    ): ApiResult<T> {
         return coroutineScope {
             try {
                 withContext(Dispatchers.IO) {
@@ -435,13 +514,19 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
 
                         launch(Dispatchers.Main) {
                             errorBlock?.let {
-                                it(ApiResult.Error(response.result, response.msg
-                                        ?: "", response.data.toString()))
+                                it(
+                                    ApiResult.Error(
+                                        response.result, response.msg
+                                            ?: "", response.data.toString()
+                                    )
+                                )
                             }
                         }
 
-                        ApiResult.Error(response.result, response.msg
-                                ?: "", response.data.toString())
+                        ApiResult.Error(
+                            response.result, response.msg
+                                ?: "", response.data.toString()
+                        )
                     }
                 }
 
@@ -463,24 +548,29 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
 
     //上传
     suspend fun uploadFile(
-            postUrl: String,
-            filePath: String,
-            fileKey: String? = "fileKey",
-            params: MutableMap<String, String>? = mutableMapOf(),
-            successBlock: ((apiResult: ApiResult.Success<String>) -> Unit)? = null,
-            errorBlock: ((error: ApiResult.Error) -> Unit)? = null,
-            progress: ((currentLength: Long, length: Long, process: Double, isDone: Boolean) -> Unit)? = null) {
+        postUrl: String,
+        filePath: String,
+        fileKey: String? = "fileKey",
+        params: MutableMap<String, String>? = mutableMapOf(),
+        successBlock: ((apiResult: ApiResult.Success<String>) -> Unit)? = null,
+        errorBlock: ((error: ApiResult.Error) -> Unit)? = null,
+        progress: ((currentLength: Long, length: Long, process: Double, isDone: Boolean) -> Unit)? = null
+    ) {
 
         try {
             val parts: ArrayList<MultipartBody.Part> = arrayListOf()
 
             //构建要上传的文件
             val file = File(filePath)
-            val requestFile = UploadProgressRequestBody(RequestBody.create(MediaType.parse("application/otcet-stream"), file), ProgressResponseCallBack { bytesWritten, contentLength, currentProgress, done ->
-                progress?.let {
-                    it(contentLength, bytesWritten, currentProgress, done)
-                }
-            })
+            val requestFile = UploadProgressRequestBody(
+                RequestBody.create(
+                    MediaType.parse("application/otcet-stream"),
+                    file
+                ), ProgressResponseCallBack { bytesWritten, contentLength, currentProgress, done ->
+                    progress?.let {
+                        it(contentLength, bytesWritten, currentProgress, done)
+                    }
+                })
             val body = MultipartBody.Part.createFormData(fileKey, file.name, requestFile)
             parts.add(body)
 
@@ -510,7 +600,11 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
     /**
      * 根据[cacheMode]类型 进行缓存处理
      */
-    private suspend fun <T> handleCache(cacheMode: CacheMode, type: Type, successBlock: (suspend CoroutineScope.(success: ApiResult.Success<T>) -> Unit)? = null) {
+    private suspend fun <T> handleCache(
+        cacheMode: CacheMode,
+        type: Type,
+        successBlock: (suspend CoroutineScope.(success: ApiResult.Success<T>) -> Unit)? = null
+    ) {
         when (cacheMode) {
             //其他的暂时没用到，有时间再完善
             CacheMode.CACHEANDREMOTEDISTINCT -> {
@@ -526,7 +620,10 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
     }
 
     //根据key获取缓存
-    private suspend fun <T> getCacheByKey(type: Type, successBlock: (suspend CoroutineScope.(success: ApiResult.Success<T>) -> Unit)? = null) {
+    private suspend fun <T> getCacheByKey(
+        type: Type,
+        successBlock: (suspend CoroutineScope.(success: ApiResult.Success<T>) -> Unit)? = null
+    ) {
         //如果存在缓存，先回调缓存
         try {
             if (!cacheKey.isNullOrBlank() && iCache.containsKey(cacheKey)) {
@@ -556,7 +653,10 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
      * 记录一个问题，现在的调用很呆，要把type传进去。 原因是，kotlin泛型擦除：kotlin里获取泛型参数一般使用 inline配合reified关键字
      * 但是这里是用的挂起函数suspend，又不能用inline的。头大~~   后期想辙优化吧~~~
      */
-    suspend fun <T : Any> executeCache(type: Type, successBlock: (suspend CoroutineScope.(success: ApiResult.Success<T>) -> Unit)? = null): R {
+    suspend fun <T : Any> executeCache(
+        type: Type,
+        successBlock: (suspend CoroutineScope.(success: ApiResult.Success<T>) -> Unit)? = null
+    ): R {
         if (!tagIsRemoteFinished) {//如果网络请求已回调，则不取缓存，不过现在手机读取本地缓存一般在15ms上下，肯定比接口快，
             handleCache(cacheMode, type, successBlock)
         }
@@ -567,6 +667,21 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
     private suspend fun <T> safeApiCallTest(call: suspend (retrofit: Retrofit, params: MutableMap<String, String>) -> BaseResponse<T>): BaseResponse<T> {
         return try {
             call(build().retrofit, getParams())
+        } catch (e: Exception) {
+            // An exception was thrown when calling the API so we're converting this to an IOException
+            HttpLog.e(e.message)
+            val ex = ApiException.handleException(e)
+            BaseResponse(ex.code, ex.message ?: "", null)
+        }
+    }
+
+    //之后在这里捕捉通用异常
+    private suspend fun <T> safeApiCallTest2(call: suspend (retrofit: Retrofit, body: RequestBody) -> BaseResponse<T>): BaseResponse<T> {
+        return try {
+            call(
+                build().retrofit,
+                FormBody.create(MediaType.parse("application/json; charset=utf-8"), getParamsJson())
+            )
         } catch (e: Exception) {
             // An exception was thrown when calling the API so we're converting this to an IOException
             HttpLog.e(e.message)
@@ -587,7 +702,10 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
         cache = config.getHttpCache()
         //默认添加 Accept-Language
         val acceptLanguage = HttpHeaders.getAcceptLanguage()
-        if (!TextUtils.isEmpty(acceptLanguage)) headers(HttpHeaders.HEAD_KEY_ACCEPT_LANGUAGE, acceptLanguage)
+        if (!TextUtils.isEmpty(acceptLanguage)) headers(
+            HttpHeaders.HEAD_KEY_ACCEPT_LANGUAGE,
+            acceptLanguage
+        )
         //默认添加 User-Agent
         val userAgent = HttpHeaders.getUserAgent()
         if (!TextUtils.isEmpty(userAgent)) headers(HttpHeaders.HEAD_KEY_USER_AGENT, userAgent)
@@ -598,6 +716,10 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
 
     fun getParams(): MutableMap<String, String> {
         return httpParams
+    }
+
+    fun getParamsJson(): String {
+        return gson.toJson(httpParams)
     }
 
     fun readTimeOut(readTimeOut: Long): R {
@@ -739,7 +861,11 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
     /**
      * https双向认证证书
      */
-    fun certificates(bksFile: InputStream?, password: String?, vararg certificates: InputStream?): R {
+    fun certificates(
+        bksFile: InputStream?,
+        password: String?,
+        vararg certificates: InputStream?
+    ): R {
         sslParams = HttpsUtils.getSslSocketFactory(bksFile, password, certificates)
         return this as R
     }
