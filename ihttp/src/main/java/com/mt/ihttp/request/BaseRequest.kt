@@ -563,18 +563,6 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
         return this as R
     }
 
-//    //之后在这里捕捉通用异常
-//    private suspend fun <T> safeApiCall(call: suspend (apiService: IHttpApiService, params: MutableMap<String, String>) -> BaseResponse<T>): BaseResponse<T> {
-//        return try {
-//            call(getApiService(), getParams())
-//        } catch (e: Exception) {
-//            // An exception was thrown when calling the API so we're converting this to an IOException
-//            HttpLog.e(e.message)
-//            val ex = ApiException.handleException(e)
-//            BaseResponse(ex.code, ex.message ?: "", null)
-//        }
-//    }
-
     //之后在这里捕捉通用异常
     private suspend fun <T> safeApiCallTest(call: suspend (retrofit: Retrofit, params: MutableMap<String, String>) -> BaseResponse<T>): BaseResponse<T> {
         return try {
@@ -593,10 +581,6 @@ abstract class BaseRequest<R : BaseRequest<R>>() {
         if (!TextUtils.isEmpty(baseUrl)) {
             httpUrl = HttpUrl.parse(baseUrl)
         }
-
-        //        if (baseUrl == null) {
-        //            baseUrl = httpUrl!!.url().protocol + "://" + httpUrl!!.url().host + "/"
-        //        }
         cacheMode = config.getCacheMode() //添加缓存模式
         cacheTime = config.getCacheTime() //缓存时间
         //Okhttp  cache
